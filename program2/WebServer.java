@@ -42,6 +42,7 @@ private boolean start(int port)
    WebWorker worker;
    try {
       socket = new ServerSocket(port);
+      System.out.println("Server running...");
    } catch (Exception e) {
       System.err.println("Error binding to port "+port+": "+e);
       return false;

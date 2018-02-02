@@ -1,17 +1,28 @@
 <project>
 <javac srcDir="." includeAntRuntime="false" destDir="." />
 
-<target name = "run">
+<target name = "clean">
+    <delete dir = "build"/>
+</target>
 
-<javac srcDir="." includeAntRuntime="false" destDir="." />
-<jar destfile="./WebServer.jar" baseDir="." >
-	<manifest>
-		<attribute name="Main-Class" value="oata.WebServer" />
-	</manifest>
-</jar>
+<target name = "compile" depends="clean">
+    <!-- testing....  <antcall target="clean"/> -->
+    <mkdir dir="build"/>
+    <javac srcDir="." includeAntRuntime="false" destDir="build"/>
+</target>
 
-<java jar="./WebServer.jar" fork="true" />
+<target name = "jar" depends="compile">
+    <!--  <antcall target="compile"/> -->
+    <mkdir dir="build/jar"/>
+    <jar destfile="build/jar/WebServer.jar" baseDir="build" >
+        <manifest>
+            <attribute name="Main-Class" value="WebServer" />
+        </manifest>
+    </jar>
+</target>
 
+<target name ="run" depends="jar">
+    <java jar="build/jar/WebServer.jar" fork="true" />
 </target>
 
 </project>
