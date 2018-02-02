@@ -1,2 +1,7 @@
 *.class
-Lab9Report2.html
+*.jar
+371Favicon1.png
+**/Lab9Report2.html
+build/
+comment.txt
+../Lab9Report2.html
