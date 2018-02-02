@@ -1,4 +1,0 @@
-<project>
-<javac srcDir="." includeAntRuntime="false" destDir="." />
-</project>
-
