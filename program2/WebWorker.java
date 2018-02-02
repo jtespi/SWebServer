@@ -20,10 +20,10 @@
 *
 **/
 
-/* CS 370 Software Development
+/** CS 370 Software Development
  * Program 2 - Java web server
  * Jacob Espinoza
- * 2018 February 01
+ * 2018 February 02
  */
 
 import java.net.Socket;
@@ -45,8 +45,6 @@ private String fileName = "";
 // StringBuilder for the path string
 private StringBuilder sb = new StringBuilder();
 
-// Boolean for input line is blank
-private boolean isLineInputBlank;
 // Boolean flag for a file could not be found error
 private boolean fileError = false;
 
@@ -100,7 +98,8 @@ public void run()
    }
    System.err.println("Done handling connection.");
    return;
-}
+} /**** END MAIN RUN FUNCTION
+*****/
 
 /**
 * Read the HTTP request header.
@@ -114,16 +113,7 @@ private void readHTTPRequest(InputStream is)
          while (!r.ready()) Thread.sleep(1);
          line = r.readLine();
  /***** Added code to get the path for the file that is being requested *****/
-
-	 // check to see if the string line is empty or only whitespace
-	 if ( line.trim().isEmpty() == true ) {
-		isLineInputBlank = true;
-	  }
-	  else {
-	    isLineInputBlank = false; }
-
-	// if the line is not empty and if the first 3 letters are GET
-         if ( (isLineInputBlank == false) && line.substring(0, 3).equals ("GET") ) {
+         if ( line.contains("GET") ) {
     		// start at index 4, the first character after the space
 		int lineInd = 4;
 		sb.append(".");
@@ -138,11 +128,12 @@ private void readHTTPRequest(InputStream is)
 		path = sb.toString();
 		pathLo = path.toLowerCase();
 
-		// clear the stringBuilder
-		sb.setLength(0);
-	 // Print the path that is being requested
-	 System.err.println(" ***** PATH = " + path + "");
-         }
+		 // clear the stringBuilder
+		 sb.setLength(0);
+	     // Print the path that is being requested
+	     System.out.println(" ***** PATH = " + path + "");
+         } /* End if line contains GET */
+         
  /***** END added code  *****/
          System.err.println("Request line: ("+line+")");
          if (line.length() == 0) break;
@@ -154,8 +145,8 @@ private void readHTTPRequest(InputStream is)
    return;
 }
 
-/* Added function to check if the file can be opened
- * If a file not found error occurs, set the boolean error flag to true
+/** Added function to check if the file can be opened
+ *  If a file not found error occurs, set the boolean error flag to true
  *   and print an error message in the web server terminal (debug msg).
  */
 
@@ -167,25 +158,17 @@ private void queryFile() {
   if ( pathLo.contains(".jpeg") ) isImage = true;
   if ( pathLo.contains(".gif") ) isImage = true;
   if ( pathLo.contains(".html") ) isImage = false;
-  System.err.println(" **--- isImage = " + isImage );
+  System.out.println(" --- isImage = " + isImage );
   
+  // Get the exact file name from the path
   fileName = trimPath ( path );
   System.err.println(" --- fileName = " + fileName );
-
-  try {
-	if (isImage == false ) {
-		BufferedReader br2 = new BufferedReader( new FileReader( file ));
-	}
-	else {
-		fileIn = new FileInputStream ( file );
-	}
-    
-    }
-  catch ( FileNotFoundException e ) {
-    fileError = true;
-    System.err.println( " ***** Error - could not open file!" );
-    }
+  
+  fileError = !(file.exists());
+  if (fileError == true ) System.err.println("***** Error - file not found!!");
+  else System.out.println("+++++ File was found :)");
 }
+
 
 /*
 */
@@ -257,6 +240,7 @@ private void writeContent(OutputStream os) throws Exception
 	os.write(fileName.getBytes());
       os.write("\n\n".getBytes());
 	
+	// Serve the plain text file byte-by-byte
 	while ( fileIn.available() > 0 ) {
 		os.write( fileIn.read());
 	}
@@ -269,27 +253,32 @@ private void writeContent(OutputStream os) throws Exception
       File file = new File( path );
       BufferedReader brPrint = new BufferedReader( new FileReader( file ));
       String lineOfFile;
+      
+      // Serve the HTML file line-by-line
       while ( (lineOfFile = brPrint.readLine()) != null ) {
-          // Look for the tag <cs371date> and replace with the current time/date
-          if ( lineOfFile.contains("<cs371date>") ) {
-		Date d2 = new Date();
-   		DateFormat df2 = new SimpleDateFormat("yyyy-MMM-dd 'at' HH:mm:ss zzzz");
-		os.write("Date & time: ".getBytes());
-		os.write((df2.format(d2)).getBytes());
-		}
+         // Look for the tag <cs371date> and replace with the current time/date
+         if ( lineOfFile.contains("<cs371date>") ) {
+            Date d2 = new Date();
+            DateFormat df2 = new SimpleDateFormat("yyyy-MMM-dd 'at' HH:mm:ss zzzz");
+            os.write("Date & time: ".getBytes());
+            os.write((df2.format(d2)).getBytes());
+            }
          // Look for the tag <cs371server> and replace with an identifying string for the server
-	   if ( lineOfFile.contains("<cs371server>") ) {
-		os.write("Server: Jacob's Program 2 server\n".getBytes());
-		}
-          os.write(lineOfFile.getBytes());
-      }
+         if ( lineOfFile.contains("<cs371server>") ) {
+           os.write("Server: Jacob's Program 2 server\n".getBytes());
+           }
+         
+         // if tags are not found, just write one line of the file
+         os.write(lineOfFile.getBytes());
+      } // file finished being read
 
+      // close the HTML document
       os.write("</body></html>\n".getBytes());
    }
 
   
 
-  /* else the file is invalid, 
+  /** else the file is invalid, 
    * print a 404 error message that the user can see (HTML body)
    */
    else {
@@ -299,6 +288,6 @@ private void writeContent(OutputStream os) throws Exception
    }
 
 
-}
+} // end writeContent function
 
 } // end class
