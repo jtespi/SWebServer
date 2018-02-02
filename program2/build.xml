@@ -1,4 +1,18 @@
 <project>
 <javac srcDir="." includeAntRuntime="false" destDir="." />
+
+<target name = "run">
+
+<javac srcDir="." includeAntRuntime="false" destDir="." />
+<jar destfile="./WebServer.jar" baseDir="." >
+	<manifest>
+		<attribute name="Main-Class" value="oata.WebServer" />
+	</manifest>
+</jar>
+
+<java jar="./WebServer.jar" fork="true" />
+
+</target>
+
 </project>
 

@@ -21,9 +21,9 @@
 **/
 
 /* CS 370 Software Development
- * Program 1 - Java web server
+ * Program 2 - Java web server
  * Jacob Espinoza
- * 2018 January 26
+ * 2018 February 01
  */
 
 import java.net.Socket;
@@ -40,6 +40,8 @@ private Socket socket;
 
 // Added string for the path of the file
 private String path = "";
+private String pathLo = "";
+private String fileName = "";
 // StringBuilder for the path string
 private StringBuilder sb = new StringBuilder();
 
@@ -47,6 +49,11 @@ private StringBuilder sb = new StringBuilder();
 private boolean isLineInputBlank;
 // Boolean flag for a file could not be found error
 private boolean fileError = false;
+
+private boolean isImage = false;
+private boolean isPlainText = false;
+
+private FileInputStream fileIn = null;
 
 /**
 * Constructor: must have a valid open socket
@@ -74,7 +81,17 @@ public void run()
       // Added method that attempts to access the file
       queryFile();
 
-      writeHTTPHeader(os,"text/html");
+	if ( pathLo.contains(".txt") ) {
+	  writeHTTPHeader(os, "text/plain");
+	  isPlainText = true;
+	}
+	if ( isImage == false ) {
+	      writeHTTPHeader(os,"text/html");
+	}
+	else
+	  writeHTTPHeader(os,"image/apng");
+ // FIXME: Change context type for other types of images
+
       writeContent(os);
       os.flush();
       socket.close();
@@ -119,6 +136,8 @@ private void readHTTPRequest(InputStream is)
 
 		// convert the stringBuilder to a string
 		path = sb.toString();
+		pathLo = path.toLowerCase();
+
 		// clear the stringBuilder
 		sb.setLength(0);
 	 // Print the path that is being requested
@@ -142,14 +161,42 @@ private void readHTTPRequest(InputStream is)
 
 private void queryFile() {
   File file = new File( path );
+  if ( pathLo.contains("favicon.ico") ) isImage = true;
+  if ( pathLo.contains(".png") ) isImage = true;
+  if ( pathLo.contains(".jpg") ) isImage = true;
+  if ( pathLo.contains(".jpeg") ) isImage = true;
+  if ( pathLo.contains(".gif") ) isImage = true;
+  if ( pathLo.contains(".html") ) isImage = false;
+  System.err.println(" **--- isImage = " + isImage );
+  
+  fileName = trimPath ( path );
+  System.err.println(" --- fileName = " + fileName );
+
   try {
-    BufferedReader br2 = new BufferedReader( new FileReader( file ));
+	if (isImage == false ) {
+		BufferedReader br2 = new BufferedReader( new FileReader( file ));
+	}
+	else {
+		fileIn = new FileInputStream ( file );
+	}
     
     }
   catch ( FileNotFoundException e ) {
     fileError = true;
     System.err.println( " ***** Error - could not open file!" );
     }
+}
+
+/*
+*/
+private String trimPath( String original ) {
+  if ( original.substring(0,1).equals(".") ) {
+     return trimPath ( original.substring(1) );
+  }
+  if ( original.contains("/") ) {
+     return trimPath ( original.substring(1) );
+  }
+  return original;
 }
 
 /**
@@ -174,7 +221,7 @@ private void writeHTTPHeader(OutputStream os, String contentType) throws Excepti
    os.write("Date: ".getBytes());
    os.write((df.format(d)).getBytes());
    os.write("\n".getBytes());
-   os.write("Server: Jacob's Program 1 server\n".getBytes());
+   os.write("Server: Jacob's Program 2 server\n".getBytes());
    //os.write("Last-Modified: Wed, 08 Jan 2003 23:11:55 GMT\n".getBytes());
    //os.write("Content-Length: 438\n".getBytes()); 
    os.write("Connection: close\n".getBytes());
@@ -191,10 +238,33 @@ private void writeHTTPHeader(OutputStream os, String contentType) throws Excepti
 **/
 private void writeContent(OutputStream os) throws Exception
 {
-  // the file is valid, so serve the file
-   if ( fileError == false ) {
+  // the image file is valid, so serve the IMAGE
+  if ( fileError == false && isImage == true ) {
+	File file = new File( path );
+	fileIn = new FileInputStream ( file );
+	
+	while ( fileIn.available() > 0 ) {
+		os.write( fileIn.read());
+	}
+  }
+
+  // the file is valid, so serve the plain text file
+  else if ( fileError == false && isPlainText == true ) {
+      File file = new File( path );
+	fileIn = new FileInputStream ( file );
+	
+	os.write("\nText file name: ".getBytes());
+	os.write(fileName.getBytes());
+      os.write("\n\n".getBytes());
+	
+	while ( fileIn.available() > 0 ) {
+		os.write( fileIn.read());
+	}
+  }
+
+  // the file is valid, so serve the HTML file
+   else if ( fileError == false && isImage == false && isPlainText == false ) {
       os.write("<html><head></head><body>\n".getBytes());
-      //os.write("<h3>My web server works!</h3>\n".getBytes());
 
       File file = new File( path );
       BufferedReader brPrint = new BufferedReader( new FileReader( file ));
@@ -209,13 +279,16 @@ private void writeContent(OutputStream os) throws Exception
 		}
          // Look for the tag <cs371server> and replace with an identifying string for the server
 	   if ( lineOfFile.contains("<cs371server>") ) {
-		os.write("Server: Jacob's Program 1 server\n".getBytes());
+		os.write("Server: Jacob's Program 2 server\n".getBytes());
 		}
           os.write(lineOfFile.getBytes());
       }
 
       os.write("</body></html>\n".getBytes());
    }
+
+  
+
   /* else the file is invalid, 
    * print a 404 error message that the user can see (HTML body)
    */
