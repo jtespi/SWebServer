@@ -23,7 +23,7 @@
 /** CS 370 Software Development
  * Program 2 - Java web server
  * Jacob Espinoza
- * 2018 February 02
+ * v2.4 - 2018 February 08
  */
 
 import java.net.Socket;
@@ -284,6 +284,8 @@ private void writeContent(OutputStream os) throws Exception
    else {
       os.write("<html><head></head><body>\n".getBytes());
       os.write("<h3><font color =\"red\">404 Error</font> - The file could not be found!</h3>\n".getBytes());
+      os.write("<br>Requested file: ".getBytes());
+      os.write(fileName.getBytes());
       os.write("</body></html>\n".getBytes());
    }
 
