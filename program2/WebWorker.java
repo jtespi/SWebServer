@@ -20,7 +20,7 @@
 *
 **/
 
-/** CS 370 Software Development
+/** CS 371 Software Development
  * Program 2 - Java web server
  * Jacob Espinoza
  * v2.4 - 2018 February 08
@@ -28,6 +28,7 @@
 
 import java.net.Socket;
 import java.lang.Runnable;
+import java.nio.file.*;
 import java.io.*;
 import java.util.Date;
 import java.text.*;
@@ -49,7 +50,9 @@ private StringBuilder sb = new StringBuilder();
 private boolean fileError = false;
 
 private boolean isImage = false;
-private boolean isPlainText = false;
+
+Path source;
+String MIMEString="";
 
 private FileInputStream fileIn = null;
 
@@ -79,16 +82,8 @@ public void run()
       // Added method that attempts to access the file
       queryFile();
 
-	if ( pathLo.contains(".txt") ) {
-	  writeHTTPHeader(os, "text/plain");
-	  isPlainText = true;
-	}
-	if ( isImage == false ) {
-	      writeHTTPHeader(os,"text/html");
-	}
-	else
-	  writeHTTPHeader(os,"image/apng");
- // FIXME: Change context type for other types of images
+// Auto MIME Type - **BETA**
+      writeHTTPHeader(os, MIMEString);
 
       writeContent(os);
       os.flush();
@@ -127,6 +122,9 @@ private void readHTTPRequest(InputStream is)
 		// convert the stringBuilder to a string
 		path = sb.toString();
 		pathLo = path.toLowerCase();
+		
+		// set a Path object named source
+		source = Paths.get(path);
 
 		 // clear the stringBuilder
 		 sb.setLength(0);
@@ -150,8 +148,12 @@ private void readHTTPRequest(InputStream is)
  *   and print an error message in the web server terminal (debug msg).
  */
 
-private void queryFile() {
+private void queryFile() throws IOException {
   File file = new File( path );
+  MIMEString = Files.probeContentType(source);
+  
+  System.out.print("*-- Auto MIME Type = ");
+  System.out.println(Files.probeContentType(source));
   if ( pathLo.contains("favicon.ico") ) isImage = true;
   if ( pathLo.contains(".png") ) isImage = true;
   if ( pathLo.contains(".jpg") ) isImage = true;
@@ -232,7 +234,7 @@ private void writeContent(OutputStream os) throws Exception
   }
 
   // the file is valid, so serve the plain text file
-  else if ( fileError == false && isPlainText == true ) {
+  else if ( fileError == false && MIMEString.contains("plain") ) {
       File file = new File( path );
 	fileIn = new FileInputStream ( file );
 	
@@ -247,7 +249,7 @@ private void writeContent(OutputStream os) throws Exception
   }
 
   // the file is valid, so serve the HTML file
-   else if ( fileError == false && isImage == false && isPlainText == false ) {
+   else if ( fileError == false && isImage == false && !(MIMEString.contains("plain")) ) {
       os.write("<html><head></head><body>\n".getBytes());
 
       File file = new File( path );
