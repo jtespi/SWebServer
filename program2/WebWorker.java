@@ -23,7 +23,7 @@
 /** CS 371 Software Development
  * Program 2 - Java web server
  * Jacob Espinoza
- * v2.5 - 2018 February 09
+ * v2.6 - 2018 February 09
  */
 
 import java.net.Socket;
@@ -51,6 +51,8 @@ private boolean fileError = false;
 // a Path object for the get request
 Path source;
 String MIMEString="";
+
+String fileSize = "0";
 
 private FileInputStream fileIn = null;
 
@@ -86,6 +88,7 @@ public void run()
 
       writeContent(os);
       os.flush();
+      os.close();
       socket.close();
    } catch (Exception e) {
       System.err.println("Output error: "+e);
@@ -121,8 +124,15 @@ private void readHTTPRequest(InputStream is)
 		// convert the stringBuilder to a string
 		path = sb.toString();
 		
+		try {
 		// set a Path object named source
 		source = Paths.get(path);
+		}
+		catch ( InvalidPathException | NullPointerException ex) {
+		   // this is an invalid path!!
+		   source = null;
+		   fileError = true;
+		}
 
 		 // clear the stringBuilder
 		 sb.setLength(0);
@@ -148,21 +158,37 @@ private void readHTTPRequest(InputStream is)
 
 private void queryFile() throws IOException {
   File file = new File( path );
+
+  // boolean flag fileError is true when the file does not exist
+  //  or when the file is a directory
+  if ( !(file.exists()) || file.isDirectory() ) 
+     fileError = true;
+
+  if (fileError == true ) System.err.println("***** Error - file not found!!");
+  else { 
+      System.out.println("+++++ File was found :)"); 
+      fileError = false; }
   
-  // use the probeContentType function to get a MIME Type string
-  MIMEString = Files.probeContentType(source);
+  if ( !fileError ) {
+     // use the probeContentType function to get a MIME Type string
+     MIMEString = Files.probeContentType(source);
+     fileSize = String.valueOf(file.length());
+	System.out.println("^^^ file size = " + fileSize + " bytes");
+  }
+  // in the case of file not found, MIME should be html
+  //  to serve a 404 html page
+  else {
+     MIMEString = "text/html";
+  }
   
   System.out.print("*-- Auto MIME Type = ");
-  System.out.println(Files.probeContentType(source));
+  System.out.println(MIMEString);
   
   // Get the exact file name from the path
   fileName = trimPath ( path );
   System.err.println(" --- fileName = " + fileName );
   
-  // boolean flag fileError is the negation of the return value of file.exists()
-  fileError = !(file.exists());
-  if (fileError == true ) System.err.println("***** Error - file not found!!");
-  else System.out.println("+++++ File was found :)");
+  
 }
 
 
@@ -170,6 +196,7 @@ private void queryFile() throws IOException {
  *** a recursive function that trims the path string to just the file name
 */
 private String trimPath( String original ) {
+  if ( original.length() < 2 ) return original;
   if ( original.substring(0,1).equals(".") ) {
      return trimPath ( original.substring(1) );
   }
@@ -202,8 +229,19 @@ private void writeHTTPHeader(OutputStream os, String contentType) throws Excepti
    os.write((df.format(d)).getBytes());
    os.write("\n".getBytes());
    os.write("Server: Jacob's Program 2 server\n".getBytes());
-   //os.write("Last-Modified: Wed, 08 Jan 2003 23:11:55 GMT\n".getBytes());
-   //os.write("Content-Length: 438\n".getBytes()); 
+   
+   if (!fileError) {
+      os.write("Content-Length: ".getBytes());
+      os.write(fileSize.getBytes()); os.write("\n".getBytes());
+   }
+
+  // if the file is not text nor graphics, set as an attachment
+   if ( !(contentType.contains("text")) && !(contentType.contains("image")) && !(contentType.contains("application")) ) {
+      os.write("Content-Disposition: attachment; ".getBytes());
+      os.write("filename=\"".getBytes());
+      os.write(fileName.getBytes());
+      os.write("\"\n".getBytes());
+   }
    os.write("Connection: close\n".getBytes());
    os.write("Content-Type: ".getBytes());
    os.write(contentType.getBytes());
@@ -273,14 +311,19 @@ private void writeContent(OutputStream os) throws Exception
       os.write("</body></html>\n".getBytes());
    }
    
-   // serve any other file types byte by byte
+   // serve any other file types byte by byte - WIP
    else if ( fileError == false ) {
        File otherFile = new File( path );
-	   fileIn = new FileInputStream ( otherFile );
-	
-	   while ( fileIn.available() > 0 ) {
-		   os.write( fileIn.read());
-	      }
+       ByteArrayOutputStream bArrOutS = new ByteArrayOutputStream( 1024 );
+       fileIn = new FileInputStream ( otherFile );
+       byte[] buffer = new byte[1024];
+       int bytesRead = 0;
+
+       // write to the server output stream
+       while ( (bytesRead = fileIn.read( buffer )) != -1 ) {
+	    os.write( buffer, 0, bytesRead );
+	}
+       os.flush();
    } 
   /** else the file is invalid, 
    * print a 404 error message that the user can see (HTML body)
