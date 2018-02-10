@@ -23,7 +23,7 @@
 /** CS 371 Software Development
  * Program 2 - Java web server
  * Jacob Espinoza
- * v2.4 - 2018 February 08
+ * v2.5 - 2018 February 09
  */
 
 import java.net.Socket;
@@ -41,7 +41,6 @@ private Socket socket;
 
 // Added string for the path of the file
 private String path = "";
-private String pathLo = "";
 private String fileName = "";
 // StringBuilder for the path string
 private StringBuilder sb = new StringBuilder();
@@ -49,8 +48,7 @@ private StringBuilder sb = new StringBuilder();
 // Boolean flag for a file could not be found error
 private boolean fileError = false;
 
-private boolean isImage = false;
-
+// a Path object for the get request
 Path source;
 String MIMEString="";
 
@@ -82,7 +80,8 @@ public void run()
       // Added method that attempts to access the file
       queryFile();
 
-// Auto MIME Type - **BETA**
+   // Auto MIME Typing:
+   //  MIMEString is generated in the readHTTPRequest function
       writeHTTPHeader(os, MIMEString);
 
       writeContent(os);
@@ -121,7 +120,6 @@ private void readHTTPRequest(InputStream is)
 
 		// convert the stringBuilder to a string
 		path = sb.toString();
-		pathLo = path.toLowerCase();
 		
 		// set a Path object named source
 		source = Paths.get(path);
@@ -129,8 +127,8 @@ private void readHTTPRequest(InputStream is)
 		 // clear the stringBuilder
 		 sb.setLength(0);
 	     // Print the path that is being requested
-	     System.out.println(" ***** PATH = " + path + "");
-         } /* End if line contains GET */
+	     System.out.println(" ***** PATH = " + source );
+         } // End if line contains GET
          
  /***** END added code  *****/
          System.err.println("Request line: ("+line+")");
@@ -150,29 +148,26 @@ private void readHTTPRequest(InputStream is)
 
 private void queryFile() throws IOException {
   File file = new File( path );
+  
+  // use the probeContentType function to get a MIME Type string
   MIMEString = Files.probeContentType(source);
   
   System.out.print("*-- Auto MIME Type = ");
   System.out.println(Files.probeContentType(source));
-  if ( pathLo.contains("favicon.ico") ) isImage = true;
-  if ( pathLo.contains(".png") ) isImage = true;
-  if ( pathLo.contains(".jpg") ) isImage = true;
-  if ( pathLo.contains(".jpeg") ) isImage = true;
-  if ( pathLo.contains(".gif") ) isImage = true;
-  if ( pathLo.contains(".html") ) isImage = false;
-  System.out.println(" --- isImage = " + isImage );
   
   // Get the exact file name from the path
   fileName = trimPath ( path );
   System.err.println(" --- fileName = " + fileName );
   
+  // boolean flag fileError is the negation of the return value of file.exists()
   fileError = !(file.exists());
   if (fileError == true ) System.err.println("***** Error - file not found!!");
   else System.out.println("+++++ File was found :)");
 }
 
 
-/*
+/* trimPath
+ *** a recursive function that trims the path string to just the file name
 */
 private String trimPath( String original ) {
   if ( original.substring(0,1).equals(".") ) {
@@ -224,7 +219,7 @@ private void writeHTTPHeader(OutputStream os, String contentType) throws Excepti
 private void writeContent(OutputStream os) throws Exception
 {
   // the image file is valid, so serve the IMAGE
-  if ( fileError == false && isImage == true ) {
+  if ( fileError == false && MIMEString.contains("image") ) {
 	File file = new File( path );
 	fileIn = new FileInputStream ( file );
 	
@@ -249,7 +244,7 @@ private void writeContent(OutputStream os) throws Exception
   }
 
   // the file is valid, so serve the HTML file
-   else if ( fileError == false && isImage == false && !(MIMEString.contains("plain")) ) {
+   else if ( fileError == false && !(MIMEString.contains("plain")) ) {
       os.write("<html><head></head><body>\n".getBytes());
 
       File file = new File( path );
@@ -277,9 +272,16 @@ private void writeContent(OutputStream os) throws Exception
       // close the HTML document
       os.write("</body></html>\n".getBytes());
    }
-
-  
-
+   
+   // serve any other file types byte by byte
+   else if ( fileError == false ) {
+       File otherFile = new File( path );
+	   fileIn = new FileInputStream ( otherFile );
+	
+	   while ( fileIn.available() > 0 ) {
+		   os.write( fileIn.read());
+	      }
+   } 
   /** else the file is invalid, 
    * print a 404 error message that the user can see (HTML body)
    */
@@ -290,8 +292,7 @@ private void writeContent(OutputStream os) throws Exception
       os.write(fileName.getBytes());
       os.write("</body></html>\n".getBytes());
    }
-
-
+   
 } // end writeContent function
 
 } // end class
